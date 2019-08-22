@@ -12,7 +12,7 @@ enum class ArmHidCommands {
 
 std::vector<BYTE> generateCommandPacket(ArmHidCommands command, const std::vector<BYTE>& arguments);
 
-void setServoPositions(::HANDLE device, int actionTime, const std::vector<int>& joints, int epsilon);
+void setServoPositions(::HANDLE device, int actionTime, const std::vector<int>& joints, int epsilon, bool wait = false);
 
 std::vector<int> readServoPositions(::HANDLE device, const std::vector<int>& ids);
 
