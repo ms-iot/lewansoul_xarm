@@ -8,5 +8,5 @@
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
   <node name="rviz" pkg="rviz" type="rviz" required="true" />
   <node name="xarm" pkg="xarm" type="xarm" />
-  <node name="xarm_marker" pkg="xarm" type="xarm_marker" />
+  <!-- <node name="xarm_marker" pkg="xarm" type="xarm_marker" /> -->
 </launch>
