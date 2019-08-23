@@ -17,7 +17,7 @@ std::vector<BYTE> generateCommandPacket(ArmHidCommands command, const std::vecto
     return packet;
 }
 
-void setServoPositions(::HANDLE device, int actionTime, const std::vector<int>& positions, int epsilon)
+void setServoPositions(::HANDLE device, int actionTime, const std::vector<int>& positions, int epsilon, bool wait)
 {
     std::vector<BYTE> arguments;
     arguments.push_back(static_cast<BYTE>(positions.size()));
@@ -31,6 +31,10 @@ void setServoPositions(::HANDLE device, int actionTime, const std::vector<int>& 
     }
     const auto command = generateCommandPacket(ArmHidCommands::Write, arguments);
     sendData(device, command);
+    if (!wait)
+    {
+        return;
+    }
 
     auto pl = positions;
     for (auto& p : pl)
