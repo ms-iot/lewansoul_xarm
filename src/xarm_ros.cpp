@@ -64,6 +64,7 @@ void xArmJointState_Callback(const sensor_msgs::JointState::ConstPtr &msg)
 
 int main(int argc, char **argv)
 {
+    ROS_INFO("Arm state: [ready]!");
     arm.resetJointPositions();
 
     ros::init(argc, argv, "xarm");

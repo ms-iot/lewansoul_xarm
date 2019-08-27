@@ -137,7 +137,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(xarm
-  src/controller.cpp
+  src/xarm_ros.cpp
   src/xarm.cpp
   src/hid.cpp
   src/joint.cpp

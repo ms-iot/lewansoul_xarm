@@ -1,135 +1,159 @@
 #include <array>
+#include <string>
 #include <vector>
 #include <chrono>
 #include <thread>
 
 // platform
+// platform
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h> // for wcscpy_s, wcscat_s
+#include <string>
+#include <windows.h>
+#include <wchar.h>
+#include <hidsdi.h>
+#include <setupapi.h>
+#include <initguid.h>
+#include <devpkey.h>    // device property keys		   (DEVPKEY_Device_HardwareIds)
+#include <devpropdef.h> // device property definitions (DEVPROP_TYPE_STRING_LIST)
 #include <windows.h>
 
 #include "hid.h"
 
-std::vector<BYTE> generateCommandPacket(ArmHidCommands command, const std::vector<BYTE>& arguments)
+namespace hid {
+
+static wchar_t* composeDevId(wchar_t *buff, const DWORD buffSize,
+                      const wchar_t *vid, const wchar_t *pid)
 {
-    std::vector<BYTE> packet;
-    const int dataLength = 1 + 1 + arguments.size();
-    packet.push_back(static_cast<BYTE>(dataLength));
-    packet.push_back(static_cast<BYTE>(command));
-    packet.insert(packet.end(), arguments.begin(), arguments.end());
-    return packet;
+    // compose the device identifier
+    wcscpy_s(buff, buffSize, L"VID_");
+    wcscat_s(buff, buffSize, vid);
+    wcscat_s(buff, buffSize, L"&PID_");
+    wcscat_s(buff, buffSize, pid);
+
+    return buff;
 }
 
-void setServoPositions(::HANDLE device, int actionTime, const std::array<int, 6>& positions, int epsilon, bool wait)
+static HDEVINFO getDevInfoSet(const LPGUID devClassGuid)
 {
-    std::vector<BYTE> arguments;
-    arguments.push_back(static_cast<BYTE>(positions.size()));
-    arguments.push_back(0x00ff & actionTime);
-    arguments.push_back((0xff00 & actionTime) >> 8);
-    for (auto i = 0; i < positions.size(); ++i)
-    {
-        arguments.push_back(static_cast<BYTE>(i + 1));
-        arguments.push_back(0x00ff & positions[i]);
-        arguments.push_back((0xff00 & positions[i]) >> 8);
-    }
-    const auto command = generateCommandPacket(ArmHidCommands::Write, arguments);
-    sendData(device, command);
-    if (!wait)
-    {
-        return;
-    }
+    return SetupDiGetClassDevs(devClassGuid, nullptr, nullptr,
+                               DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
+}
 
-    auto pl = positions;
-    for (auto& p : pl)
+static bool getDevInfoByPIDVID(const HDEVINFO devInfoSet, const LPGUID devClassGuid,
+                        const wchar_t *devId, PSP_DEVINFO_DATA devInfoBuffer)
+{
+    DEVPROPTYPE devPropType = DEVPROP_TYPE_STRING; // hardware id property type specifier
+    wchar_t szBuff[256] = {'\0'};
+    DWORD dwBuffReqSize = 0;
+
+    SP_DEVINFO_DATA currDevInfo; // device info iterator
+    currDevInfo.cbSize = sizeof(SP_DEVINFO_DATA);
+
+    for (DWORD idx = 0; SetupDiEnumDeviceInfo(devInfoSet, idx, &currDevInfo); idx++)
     {
-        p -= epsilon;
-    }
-    auto ph = positions;
-    for (auto& p : ph)
-    {
-        p += epsilon;
-    }
-    while (true)
-    {
-        const auto pos = readServoPositions(device, { 1, 2, 3, 4, 5, 6 });
-        bool pass = true;
-        for (auto i = 0; i < pos.size(); ++i)
+        // https://docs.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdigetdevicepropertyw
+        // SetupAPI supports only a Unicode version of SetupDiGetDeviceProperty
+        if (::SetupDiGetDevicePropertyW(
+                devInfoSet, &currDevInfo,                         // device info
+                &DEVPKEY_Device_HardwareIds, &devPropType,        // key info
+                (PBYTE)szBuff, sizeof(szBuff), &dwBuffReqSize, 0) // out buffers
+            && wcsstr(szBuff, devId))
         {
-            if (pos[i] < pl[i] || pos[i] > ph[i])
-            {
-                pass = false;
-                break;
-            }
-        }
-        if (pass)
-        {
-            break;
+            *devInfoBuffer = currDevInfo;
+            return true;
         }
     }
+
+    return false;
 }
 
-std::vector<int> readServoPositions(::HANDLE device, const std::vector<int>& ids)
+static bool extractInterfData(const HDEVINFO devInfoSet, PSP_DEVINFO_DATA devInfo,
+                       const LPGUID devClassGuid, PSP_DEVICE_INTERFACE_DATA interfData)
 {
-    std::vector<BYTE> arguments;
-    arguments.push_back(static_cast<BYTE>(ids.size()));
-    for (const auto& id : ids)
-    {
-        arguments.push_back(static_cast<BYTE>(id));
-    }
-    const auto command = generateCommandPacket(ArmHidCommands::Read, arguments);
-    sendData(device, command);
+    SP_DEVICE_INTERFACE_DATA currentInterfData;
+    currentInterfData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
 
-    const auto reading = recvData(device);
-    if (reading[0] != static_cast<BYTE>(ArmHidCommands::Read))
+    // TODO consider devices with multiple interfaces (ours now has only one)
+    if (SetupDiEnumDeviceInterfaces(devInfoSet, devInfo,
+                                    devClassGuid, 0, &currentInterfData))
     {
-        throw;
+        *interfData = currentInterfData;
+        return true;
     }
-    const auto numServo = static_cast<size_t>(reading[1]);
-    if (reading.size() != numServo * 3 + 2)
-    {
-        throw;
-    }
-    std::vector<int> servoPositions(6, -1);
-    for (auto i = 0; i < numServo; ++i)
-    {
-        // actual reading starts from byte 3, each servo reading takes 3 bytes
-        auto p = 2 + 3 * i;
-        const auto& topBits = reading[p + 2];
-        const auto& bottomBits = reading[p + 1];
-        servoPositions[static_cast<unsigned>(reading[p]) - 1] = (topBits << 8) | bottomBits;
-    }
-    return servoPositions;
+
+    return false;
 }
 
-std::array<int, 6> readServoPositions(::HANDLE device)
+static HANDLE getHandleToInterface(const HDEVINFO devInfoSet, const PSP_DEVICE_INTERFACE_DATA devInterfData)
 {
-    std::vector<BYTE> arguments;
-    arguments.push_back(static_cast<BYTE>(6));
-    for (auto id = 1; id <= 6; ++id)
-    {
-        arguments.push_back(static_cast<BYTE>(id));
-    }
-    const auto command = generateCommandPacket(ArmHidCommands::Read, arguments);
-    sendData(device, command);
+    HANDLE handle = nullptr;
 
-    const auto reading = recvData(device);
-    if (reading[0] != static_cast<BYTE>(ArmHidCommands::Read))
+    // 1. get device interface detail buffer size
+
+    DWORD requiredSize = 0;
+    SetupDiGetDeviceInterfaceDetail(devInfoSet, devInterfData, nullptr, 0, &requiredSize, nullptr);
+
+    // 2. get interface detail and open handle
+
+    PSP_DEVICE_INTERFACE_DETAIL_DATA devInterfDetail =
+        (PSP_DEVICE_INTERFACE_DETAIL_DATA)malloc(requiredSize);
+
+    if (devInterfDetail != nullptr)
     {
-        throw;
+        devInterfDetail->cbSize = sizeof(SP_INTERFACE_DEVICE_DETAIL_DATA);
+        if (SetupDiGetDeviceInterfaceDetail(devInfoSet, devInterfData,
+                                            devInterfDetail, requiredSize, nullptr, nullptr))
+        {
+            handle = CreateFile(devInterfDetail->DevicePath, GENERIC_READ | GENERIC_WRITE,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        }
+
+        // clean up temporary buffer
+        free(devInterfDetail);
     }
-    const auto numServo = static_cast<size_t>(reading[1]);
-    if (reading.size() != numServo * 3 + 2)
+
+    return handle;
+}
+
+::HANDLE initializeDevice(const std::wstring& vid, const std::wstring& pid)
+{
+    HANDLE devHandle = nullptr;
+
+    // 1. get device interface class
+
+    GUID devIClassGuid;
+    HidD_GetHidGuid(&devIClassGuid);
+
+    // 2. get set of devices with interfaces within such class
+
+    HDEVINFO devInfoSet = getDevInfoSet(&devIClassGuid);
+
+    // 3. filter through set looking for device information with specific pid and vid identifiers
+
+    DWORD hardwareIDLength = vid.length() + pid.length() + 8 + 2; // should be 16 + termination char
+    wchar_t *hardwareId = new wchar_t[hardwareIDLength];
+    composeDevId(hardwareId, hardwareIDLength, vid.c_str(), pid.c_str());
+
+    SP_DEVINFO_DATA devInfo;
+    if (getDevInfoByPIDVID(devInfoSet, &devIClassGuid, hardwareId, &devInfo))
     {
-        throw;
+        // 4. get interface data from device information
+
+        SP_DEVICE_INTERFACE_DATA devInterfData;
+        if (extractInterfData(devInfoSet, &devInfo, &devIClassGuid, &devInterfData))
+        {
+            // 5. get handle from device path contained in device interface details structure
+            devHandle = getHandleToInterface(devInfoSet, &devInterfData);
+        }
     }
-    std::array<int, 6> servoPositions = { 0 };
-    for (auto i = 0; i < numServo; ++i)
-    {
-        // actual reading starts from byte 3, each servo reading takes 3 bytes
-        auto p = 2 + 3 * i;
-        const auto& topBits = reading[p + 2];
-        const auto& bottomBits = reading[p + 1];
-        servoPositions[static_cast<unsigned>(reading[p]) - 1] = (topBits << 8) | bottomBits;
-    }
-    return servoPositions;
+
+    // 6. cleanup
+
+    SetupDiDestroyDeviceInfoList(devInfoSet);
+
+    return devHandle;
 }
 
 void sendData(::HANDLE device, const std::vector<BYTE>& data)
@@ -141,8 +165,6 @@ void sendData(::HANDLE device, const std::vector<BYTE>& data)
 
     std::vector<BYTE> packet = {
         0x00, // HID report ID
-        0x55, // first byte of header
-        0x55, // second byte of header
     };
     packet.insert(packet.end(), data.begin(), data.end());
 
@@ -192,4 +214,6 @@ std::vector<BYTE> recvData(::HANDLE device)
     auto dataLength = static_cast<unsigned>(buffer[3]) - 1;
     std::vector<BYTE> data(buffer.begin() + 4, buffer.begin() + 4 + dataLength);
     return data;
+}
+
 }

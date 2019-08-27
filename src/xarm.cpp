@@ -4,17 +4,6 @@
 #include <cmath>
 
 // platform
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h> // for wcscpy_s, wcscat_s
-#include <string>
-#include <windows.h>
-#include <wchar.h>
-#include <hidsdi.h>
-#include <setupapi.h>
-#include <initguid.h>
-#include <devpkey.h>    // device property keys		   (DEVPKEY_Device_HardwareIds)
-#include <devpropdef.h> // device property definitions (DEVPROP_TYPE_STRING_LIST)
 #include <windows.h>
 
 #include "xarm.h"
@@ -35,142 +24,34 @@ Arm::Arm()
     initializeJoints();
 }
 
-wchar_t *composeDevId(wchar_t *buff, const DWORD buffSize,
-                      const wchar_t *vid, const wchar_t *pid)
+Arm::~Arm()
 {
-    // compose the device identifier
-    wcscpy_s(buff, buffSize, L"VID_");
-    wcscat_s(buff, buffSize, vid);
-    wcscat_s(buff, buffSize, L"&PID_");
-    wcscat_s(buff, buffSize, pid);
-
-    return buff;
+    // @todo: move to device class
+    ::CloseHandle(device);
 }
 
-HDEVINFO getDevInfoSet(const LPGUID devClassGuid)
+void Arm::resetJointPositions()
 {
-    return SetupDiGetClassDevs(devClassGuid, nullptr, nullptr,
-                               DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
+    const uint16_t actionTime = 1000;
+    setServoPositions(actionTime, {500, 500, 500, 500, 500, 500}, 50);
 }
 
-bool getDevInfoByPIDVID(const HDEVINFO devInfoSet, const LPGUID devClassGuid,
-                        const wchar_t *devId, PSP_DEVINFO_DATA devInfoBuffer)
+void Arm::setJointPositions(const std::array<double, Arm::numJoints> &pos)
 {
-    DEVPROPTYPE devPropType = DEVPROP_TYPE_STRING; // hardware id property type specifier
-    wchar_t szBuff[256] = {'\0'};
-    DWORD dwBuffReqSize = 0;
-
-    SP_DEVINFO_DATA currDevInfo; // device info iterator
-    currDevInfo.cbSize = sizeof(SP_DEVINFO_DATA);
-
-    for (DWORD idx = 0; SetupDiEnumDeviceInfo(devInfoSet, idx, &currDevInfo); idx++)
-    {
-        // https://docs.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdigetdevicepropertyw
-        // SetupAPI supports only a Unicode version of SetupDiGetDeviceProperty
-        if (::SetupDiGetDevicePropertyW(
-                devInfoSet, &currDevInfo,                         // device info
-                &DEVPKEY_Device_HardwareIds, &devPropType,        // key info
-                (PBYTE)szBuff, sizeof(szBuff), &dwBuffReqSize, 0) // out buffers
-            && wcsstr(szBuff, devId))
-        {
-            *devInfoBuffer = currDevInfo;
-            return true;
-        }
-    }
-
-    return false;
+    const uint16_t actionTime = 1000;
+    const auto servoPositions = convertToServoReadings(pos);
+    setServoPositions(actionTime, servoPositions, 50);
 }
 
-bool extractInterfData(const HDEVINFO devInfoSet, PSP_DEVINFO_DATA devInfo,
-                       const LPGUID devClassGuid, PSP_DEVICE_INTERFACE_DATA interfData)
+std::array<double, Arm::numJoints> Arm::getJointPositions()
 {
-    SP_DEVICE_INTERFACE_DATA currentInterfData;
-    currentInterfData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
-
-    // TODO consider devices with multiple interfaces (ours now has only one)
-    if (SetupDiEnumDeviceInterfaces(devInfoSet, devInfo,
-                                    devClassGuid, 0, &currentInterfData))
-    {
-        *interfData = currentInterfData;
-        return true;
-    }
-
-    return false;
-}
-
-HANDLE getHandleToInterface(const HDEVINFO devInfoSet, const PSP_DEVICE_INTERFACE_DATA devInterfData)
-{
-    HANDLE handle = nullptr;
-
-    // 1. get device interface detail buffer size
-
-    DWORD requiredSize = 0;
-    SetupDiGetDeviceInterfaceDetail(devInfoSet, devInterfData, nullptr, 0, &requiredSize, nullptr);
-
-    // 2. get interface detail and open handle
-
-    PSP_DEVICE_INTERFACE_DETAIL_DATA devInterfDetail =
-        (PSP_DEVICE_INTERFACE_DETAIL_DATA)malloc(requiredSize);
-
-    if (devInterfDetail != nullptr)
-    {
-        devInterfDetail->cbSize = sizeof(SP_INTERFACE_DEVICE_DETAIL_DATA);
-        if (SetupDiGetDeviceInterfaceDetail(devInfoSet, devInterfData,
-                                            devInterfDetail, requiredSize, nullptr, nullptr))
-        {
-            handle = CreateFile(devInterfDetail->DevicePath, GENERIC_READ | GENERIC_WRITE,
-                                FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-        }
-
-        // clean up temporary buffer
-        free(devInterfDetail);
-    }
-
-    return handle;
-}
-
-HANDLE OpenHIDByVidPid(const WCHAR *vid, const WCHAR *pid)
-{
-    HANDLE devHandle = nullptr;
-
-    // 1. get device interface class
-
-    GUID devIClassGuid;
-    HidD_GetHidGuid(&devIClassGuid);
-
-    // 2. get set of devices with interfaces within such class
-
-    HDEVINFO devInfoSet = getDevInfoSet(&devIClassGuid);
-
-    // 3. filter through set looking for device information with specific pid and vid identifiers
-
-    DWORD hardwareIDLength = wcslen(vid) + wcslen(pid) + 8 + 2; // should be 16 + termination char
-    wchar_t *hardwareId = new wchar_t[hardwareIDLength];
-    composeDevId(hardwareId, hardwareIDLength, vid, pid);
-
-    SP_DEVINFO_DATA devInfo;
-    if (getDevInfoByPIDVID(devInfoSet, &devIClassGuid, hardwareId, &devInfo))
-    {
-        // 4. get interface data from device information
-
-        SP_DEVICE_INTERFACE_DATA devInterfData;
-        if (extractInterfData(devInfoSet, &devInfo, &devIClassGuid, &devInterfData))
-        {
-            // 5. get handle from device path contained in device interface details structure
-            devHandle = getHandleToInterface(devInfoSet, &devInterfData);
-        }
-    }
-
-    // 6. cleanup
-
-    SetupDiDestroyDeviceInfoList(devInfoSet);
-
-    return devHandle;
+    const auto servoReadings = readServoPositions();
+    return convertToRadian(servoReadings);
 }
 
 void Arm::initializeDevice()
 {
-    device = OpenHIDByVidPid(L"0483", L"5750");
+    device = hid::initializeDevice(L"0483", L"5750");
 }
 
 void Arm::initializeJoints()
@@ -234,23 +115,139 @@ std::array<int, Arm::numJoints> Arm::convertToServoReadings(const std::array<dou
     return servoReadings;
 }
 
-void Arm::resetJointPositions()
+void Arm::sendCommand(const Arm::Commands& command, const std::vector<unsigned char>& arguments)
 {
-    const uint16_t actionTime = 1000;
-    setServoPositions(device, actionTime, {500, 500, 500, 500, 500, 500}, 50);
+    // Header:
+    // Received two consecutive 0x55, indicates that the data packets arrived.
+    // Length:
+    // Equal to the parameter number N plus a command and plus the byte length occupied by the data length itself. That means the data length is equal to the parameter N plus 2. (Length = N + command + a byte length = N + 2)
+    // Command:
+    // Various control instructions.
+    // Parameter:
+    // In addition to the command, the need to add control information
+
+    // @todo: verify parameters
+
+    std::vector<unsigned char> packet = {
+        0x55, // first byte of header
+        0x55, // second byte of header
+    };
+    const int dataLength = arguments.size() + 2;
+    packet.push_back(static_cast<unsigned char>(dataLength));
+    packet.push_back(static_cast<unsigned char>(command));
+    packet.insert(packet.end(), arguments.begin(), arguments.end());
+    hid::sendData(device, packet);
 }
 
-void Arm::setJointPositions(const std::array<double, Arm::numJoints> &pos)
+void Arm::setServoPositions(int actionTime, const std::array<int, Arm::numJoints>& positions, int epsilon, bool wait)
 {
-    const uint16_t actionTime = 1000;
-    const auto servoPositions = convertToServoReadings(pos);
-    setServoPositions(device, actionTime, servoPositions, 50);
+    std::vector<unsigned char> arguments;
+    arguments.push_back(static_cast<BYTE>(positions.size()));
+    arguments.push_back(0x00ff & actionTime);
+    arguments.push_back((0xff00 & actionTime) >> 8);
+    for (auto i = 0; i < positions.size(); ++i)
+    {
+        arguments.push_back(static_cast<BYTE>(i + 1));
+        arguments.push_back(0x00ff & positions[i]);
+        arguments.push_back((0xff00 & positions[i]) >> 8);
+    }
+    sendCommand(Arm::Commands::Write, arguments);
+    if (!wait)
+    {
+        return;
+    }
+
+    auto pl = positions;
+    for (auto& p : pl)
+    {
+        p -= epsilon;
+    }
+    auto ph = positions;
+    for (auto& p : ph)
+    {
+        p += epsilon;
+    }
+    while (true)
+    {
+        const auto pos = readServoPositions();
+        bool pass = true;
+        for (auto i = 0; i < pos.size(); ++i)
+        {
+            if (pos[i] < pl[i] || pos[i] > ph[i])
+            {
+                pass = false;
+                break;
+            }
+        }
+        if (pass)
+        {
+            break;
+        }
+    }
 }
 
-std::array<double, Arm::numJoints> Arm::getJointPositions()
+std::vector<int> Arm::readServoPositions(const std::vector<int>& ids)
 {
-    const auto servoReadings = readServoPositions(device);
-    return convertToRadian(servoReadings);
+    std::vector<BYTE> arguments;
+    arguments.push_back(static_cast<BYTE>(ids.size()));
+    for (const auto& id : ids)
+    {
+        arguments.push_back(static_cast<BYTE>(id));
+    }
+    sendCommand(Arm::Commands::Read, arguments);
+
+    const auto reading = hid::recvData(device);
+    if (reading[0] != static_cast<BYTE>(Arm::Commands::Read))
+    {
+        throw;
+    }
+    const auto numServo = static_cast<size_t>(reading[1]);
+    if (reading.size() != numServo * 3 + 2)
+    {
+        throw;
+    }
+    std::vector<int> servoPositions(6, -1);
+    for (auto i = 0; i < numServo; ++i)
+    {
+        // actual reading starts from byte 3, each servo reading takes 3 bytes
+        auto p = 2 + 3 * i;
+        const auto& topBits = reading[p + 2];
+        const auto& bottomBits = reading[p + 1];
+        servoPositions[static_cast<unsigned>(reading[p]) - 1] = (topBits << 8) | bottomBits;
+    }
+    return servoPositions;
+}
+
+std::array<int, Arm::numJoints> Arm::readServoPositions()
+{
+    std::vector<BYTE> arguments;
+    arguments.push_back(static_cast<BYTE>(6));
+    for (auto id = 1; id <= 6; ++id)
+    {
+        arguments.push_back(static_cast<BYTE>(id));
+    }
+    sendCommand(Arm::Commands::Read, arguments);
+
+    const auto reading = hid::recvData(device);
+    if (reading[0] != static_cast<BYTE>(Arm::Commands::Read))
+    {
+        throw;
+    }
+    const auto numServo = static_cast<size_t>(reading[1]);
+    if (reading.size() != numServo * 3 + 2)
+    {
+        throw;
+    }
+    std::array<int, 6> servoPositions = { 0 };
+    for (auto i = 0; i < numServo; ++i)
+    {
+        // actual reading starts from byte 3, each servo reading takes 3 bytes
+        auto p = 2 + 3 * i;
+        const auto& topBits = reading[p + 2];
+        const auto& bottomBits = reading[p + 1];
+        servoPositions[static_cast<unsigned>(reading[p]) - 1] = (topBits << 8) | bottomBits;
+    }
+    return servoPositions;
 }
 
 } // namespace xarm
