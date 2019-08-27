@@ -19,50 +19,53 @@ const std::string base_joint = "base_joint_5";
 
 void xArmJointState_Callback(const sensor_msgs::JointState::ConstPtr &msg)
 {
-    const auto &names = msg->name;
-    const auto &positions = msg->position;
-    if (names.size() != positions.size())
+    const auto &name = msg->name;
+    const auto &position = msg->position;
+    // const auto &velocity = msg->velocity;
+    // const auto &effort = msg->effort;
+
+    // @todo: sanity check with joint names
+    if (name.size() != position.size())
     {
-        ROS_ERROR("names [size: %d] and positions [size: %d] don't match!", names.size(), positions.size());
+        ROS_ERROR("name [size: %d] and position [size: %d] don't match!", name.size(), position.size());
         return;
     }
 
     ROS_INFO("received joint states!");
-    std::array<double, 6> pos = {0};
-    for (auto i = 0; i < names.size(); i++)
+    std::array<double, Arm::numJoints> pos = {0};
+    for (auto i = 0; i < name.size(); i++)
     {
-        const auto &name = names[i];
-        const auto &position = positions[i];
-        if (name == left_gripper_joint)
+        const auto &n = name[i];
+        const auto &p = position[i];
+        if (n == left_gripper_joint)
         {
-            pos[0] = position;
+            pos[0] = p;
         }
-        else if (name == wrist_joint_1)
+        else if (n == wrist_joint_1)
         {
-            pos[1] = position;
+            pos[1] = p;
         }
-        else if (name == wrist_joint_2)
+        else if (n == wrist_joint_2)
         {
-            pos[2] = position;
+            pos[2] = p;
         }
-        else if (name == elbow_joint)
+        else if (n == elbow_joint)
         {
-            pos[3] = position;
+            pos[3] = p;
         }
-        else if (name == shoulder_joint)
+        else if (n == shoulder_joint)
         {
-            pos[4] = position;
+            pos[4] = p;
         }
-        else if (name == base_joint)
+        else if (n == base_joint)
         {
-            pos[5] = position;
+            pos[5] = p;
         }
-    }
-
+    };
     arm.setJointPositions(pos);
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     ROS_INFO("Arm state: [ready]!");
     arm.resetJointPositions();
@@ -102,10 +105,10 @@ int main(int argc, char **argv)
         joint_state.name[5] = base_joint;
         joint_state.position[5] = jointState[5];
 
-        //update transform
+        // update transform
         odom_trans.header.stamp = ros::Time::now();
 
-        //send the joint state and transform
+        // send the joint state and transform
         pub.publish(joint_state);
         broadcaster.sendTransform(odom_trans);
 
