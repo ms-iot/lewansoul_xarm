@@ -8,7 +8,8 @@
             "includePath": [
                 "C:\\Users\\t-phnguy\\catkin_ws\\devel\\include\\**",
                 "C:\\opt\\ros\\melodic\\x64\\include\\**",
-                "C:\\opt\\rosdeps\\x64\\include\\**"
+                "C:\\opt\\rosdeps\\x64\\include\\**",
+                "${workspaceFolder}/include"
             ],
             "name": "ROS",
             "intelliSenseMode": "msvc-x64",
