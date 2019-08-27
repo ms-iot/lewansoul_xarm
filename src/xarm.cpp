@@ -10,11 +10,6 @@
 #include "joint.h"
 #include "hid.h"
 
-static double pi()
-{
-    return std::atan(1) * 4;
-}
-
 namespace xarm
 {
 
@@ -57,7 +52,8 @@ void Arm::initializeDevice()
 void Arm::initializeJoints()
 {
     auto const degreeToRadianWorker = [](double degree) -> double {
-        return degree * pi() / 180;
+        static const auto pi = std::atan(1) * 4;
+        return degree * pi / 180;
     };
 
     static const std::array<double, Arm::numJoints> minServo = {
