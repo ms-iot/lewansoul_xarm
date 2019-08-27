@@ -5,6 +5,8 @@
 // platform
 #include <windows.h>
 
+#include "hid.h"
+
 namespace xarm_api {
 
     class xarm_api
@@ -13,7 +15,7 @@ namespace xarm_api {
         HANDLE deviceHandle;
 
         public:
-        xarm_api(::HANDLE deviceHandle);
+        xarm_api(HANDLE deviceHandle);
         ~xarm_api();
 
         struct Joints 

@@ -17,8 +17,7 @@ static const double maxRad[6] = {90 * (pi / 180), 90 * (pi / 180), 40 * (pi / 18
 
 xarm_api::xarm_api(HANDLE deviceHandle)
 {
-    
-
+    deviceHandle = hid::OpenHIDByVidPid(L"0483", L"5750");
 }
        
 xarm_api::~xarm_api()
