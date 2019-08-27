@@ -18,20 +18,17 @@ public:
 
     static const int numJoints = 6;
 
-    std::array<double, Arm::numJoints> convertToRadian(const std::array<int, Arm::numJoints>& servoReadings);
-    std::array<int, Arm::numJoints> convertToServoReadings(const std::array<double, Arm::numJoints>& radian);
+    void resetPosition(::HANDLE device);
+    void setPosition(::HANDLE device, const std::array<double, Arm::numJoints>& pos);
+    std::array<double, Arm::numJoints> getPosition(::HANDLE device);
 
 private:
     void initialize();
+    std::array<double, Arm::numJoints> convertToRadian(const std::array<int, Arm::numJoints>& servoReadings);
+    std::array<int, Arm::numJoints> convertToServoReadings(const std::array<double, Arm::numJoints>& radian);
 
     std::array<std::unique_ptr<Joint>, Arm::numJoints> joints;
 };
-
-void MoveToPosition(::HANDLE device, const std::array<double, 6>& pos);
-
-std::array<double, 6> readPosition(::HANDLE device);
-
-void PrintCurrentPosition(::HANDLE device);
 
 } // namespace xarm
 

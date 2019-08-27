@@ -17,7 +17,7 @@ int Joint::getServo()
 
 void Joint::setServo(int servo)
 {
-    // check with bounds
+    // @todo: check bounds
 
     this->servo = servo;
 }
@@ -29,14 +29,14 @@ double Joint::getAngle()
 
 void Joint::setAngle(double angle)
 {
-    // check with bounds
+    // @todo: check bounds
 
     this->servo = convertToServoReading(angle);
 }
 
 double Joint::convertToRadian(int servo)
 {
-    // check with bounds
+    // @todo: check bounds
 
     const auto diff = servo - minServo;
     const auto ratio = (maxAngle - minAngle) / (maxServo - minServo);
@@ -45,7 +45,7 @@ double Joint::convertToRadian(int servo)
 
 int Joint::convertToServoReading(double angle)
 {
-    // check with bounds
+    // @todo: check bounds
 
     const auto diff = angle - minAngle;
     const auto ratio = (maxServo - minServo) / (maxAngle - minAngle);

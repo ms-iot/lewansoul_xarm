@@ -28,6 +28,7 @@
 using namespace xarm;
 
 ::HANDLE device = nullptr;
+Arm arm;
 
 wchar_t *composeDevId(wchar_t *buff, const DWORD buffSize,
                       const wchar_t *vid, const wchar_t *pid)
@@ -209,7 +210,7 @@ void xArmJointState_Callback(const sensor_msgs::JointState::ConstPtr& msg)
         }
     }
 
-    MoveToPosition(device, pos);
+    arm.setPosition(device, pos);
 }
 
 int main(int argc, char **argv)
@@ -218,9 +219,7 @@ int main(int argc, char **argv)
     device = OpenHIDByVidPid(L"0483", L"5750");
     // setup (center)
 
-    Arm arm;
-
-    MoveToPosition(device, arm.convertToRadian({ 500, 500, 500, 500, 500, 500}));
+    arm.resetPosition(device);
 
     ros::init(argc, argv, "xarm");
     ros::NodeHandle nh;
@@ -237,7 +236,7 @@ int main(int argc, char **argv)
     while (ros::ok())
     {
         // get joint state in radian
-        const auto jointState = readPosition(device);
+        const auto jointState = arm.getPosition(device);
 
         // update joint_state
         sensor_msgs::JointState joint_state;

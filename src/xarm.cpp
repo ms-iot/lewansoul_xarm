@@ -25,8 +25,7 @@ Arm::Arm()
 
 void Arm::initialize()
 {
-    auto const degreeToRadianWorker = [](double degree) -> double
-    {
+    auto const degreeToRadianWorker = [](double degree) -> double {
         return degree * pi() / 180;
     };
 
@@ -65,7 +64,7 @@ void Arm::initialize()
     }
 }
 
-std::array<double, Arm::numJoints> Arm::convertToRadian(const std::array<int, Arm::numJoints>& servoReadings)
+std::array<double, Arm::numJoints> Arm::convertToRadian(const std::array<int, Arm::numJoints> &servoReadings)
 {
     std::array<double, Arm::numJoints> radian;
     for (int i = 0; i < servoReadings.size(); i++)
@@ -75,7 +74,7 @@ std::array<double, Arm::numJoints> Arm::convertToRadian(const std::array<int, Ar
     return radian;
 }
 
-std::array<int, Arm::numJoints> Arm::convertToServoReadings(const std::array<double, Arm::numJoints>& radian)
+std::array<int, Arm::numJoints> Arm::convertToServoReadings(const std::array<double, Arm::numJoints> &radian)
 {
     std::array<int, Arm::numJoints> servoReadings;
     for (int i = 0; i < radian.size(); i++)
@@ -85,31 +84,23 @@ std::array<int, Arm::numJoints> Arm::convertToServoReadings(const std::array<dou
     return servoReadings;
 }
 
-void MoveToPosition(::HANDLE device, const std::array<double, 6> &pos)
+void Arm::resetPosition(::HANDLE device)
 {
-    Arm arm;
-
     const uint16_t actionTime = 1000;
-    const auto servoPositions = arm.convertToServoReadings(pos);
+    setServoPositions(device, actionTime, {500, 500, 500, 500, 500, 500}, 50);
+}
+
+void Arm::setPosition(::HANDLE device, const std::array<double, Arm::numJoints> &pos)
+{
+    const uint16_t actionTime = 1000;
+    const auto servoPositions = convertToServoReadings(pos);
     setServoPositions(device, actionTime, servoPositions, 50);
 }
 
-std::array<double, 6> readPosition(::HANDLE device)
+std::array<double, Arm::numJoints> Arm::getPosition(::HANDLE device)
 {
-    Arm arm;
-
     const auto servoReadings = readServoPositions(device);
-    return arm.convertToRadian(servoReadings);
-}
-
-void PrintCurrentPosition(::HANDLE device)
-{
-    auto joints = readPosition(device);
-    for (const auto &joint : joints)
-    {
-        std::cout << joint << " ";
-    }
-    std::cout << std::endl;
+    return convertToRadian(servoReadings);
 }
 
 } // namespace xarm
