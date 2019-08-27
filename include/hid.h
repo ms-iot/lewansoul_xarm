@@ -5,17 +5,26 @@
 // platform
 #include <windows.h>
 
-enum class ArmHidCommands {
-    Read = 0x15,
-    Write = 0x03,
-};
+namespace hid 
+{
+    class hid
+    {
+        public:
 
-std::vector<BYTE> generateCommandPacket(ArmHidCommands command, const std::vector<BYTE>& arguments);
+        enum class ArmHidCommands {
+            Read = 0x15,
+            Write = 0x03,
+        };
 
-void setServoPositions(::HANDLE device, int actionTime, const std::vector<int>& joints, int epsilon, bool wait = false);
+        std::vector<BYTE> generateCommandPacket(ArmHidCommands command, const std::vector<BYTE>& arguments);
 
-std::vector<int> readServoPositions(::HANDLE device, const std::vector<int>& ids);
+        void setServoPositions(::HANDLE device, int actionTime, const std::vector<int>& joints, int epsilon, bool wait = false);
 
-void sendData(::HANDLE device, const std::vector<BYTE>& data);
+        std::vector<int> readServoPositions(::HANDLE device, const std::vector<int>& ids);
 
-std::vector<BYTE> recvData(::HANDLE device);
+        void sendData(::HANDLE device, const std::vector<BYTE>& data);
+
+        std::vector<BYTE> recvData(::HANDLE device);
+   
+    };
+}
