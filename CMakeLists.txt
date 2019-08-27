@@ -163,7 +163,7 @@ target_link_libraries(xarm
   ${Boost_LIBRARIES}
   SetupAPI.lib
   Hid.lib
-  ${CMAKE_CURRENT_SOURCE_DIR}/dep/hidapi.lib
+  ${CMAKE_CURRENT_SOURCE_DIR}/dep/hidapi-win/x64/hidapi.lib
 )
 
 # add_executable(xarm_marker

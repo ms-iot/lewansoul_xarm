@@ -78,4 +78,4 @@ target_link_libraries(xarm
 )
 ```
 
-@TODO: install `dep/hidapi.dll` to binary path for runtime support
+@todo: install `dep/hidapi.dll` to binary path for runtime support
