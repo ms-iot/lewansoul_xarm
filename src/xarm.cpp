@@ -6,6 +6,7 @@
 // platform
 #include <windows.h>
 
+#include "ihid.h"
 #include "xarm.h"
 #include "joint.h"
 #include "hid.h"
@@ -17,12 +18,6 @@ Arm::Arm()
 {
     initializeDevice();
     initializeJoints();
-}
-
-Arm::~Arm()
-{
-    // @todo: move to device class
-    ::CloseHandle(device);
 }
 
 void Arm::resetJointPositions()
@@ -46,7 +41,7 @@ std::array<double, Arm::numJoints> Arm::getJointPositions()
 
 void Arm::initializeDevice()
 {
-    device = hid::initializeDevice(L"0483", L"5750");
+    device = std::make_unique<Hid>();
 }
 
 void Arm::initializeJoints()
@@ -113,15 +108,6 @@ std::array<int, Arm::numJoints> Arm::convertToServoReadings(const std::array<dou
 
 void Arm::sendCommand(const Arm::Commands& command, const std::vector<unsigned char>& arguments)
 {
-    // Header:
-    // Received two consecutive 0x55, indicates that the data packets arrived.
-    // Length:
-    // Equal to the parameter number N plus a command and plus the byte length occupied by the data length itself. That means the data length is equal to the parameter N plus 2. (Length = N + command + a byte length = N + 2)
-    // Command:
-    // Various control instructions.
-    // Parameter:
-    // In addition to the command, the need to add control information
-
     // @todo: verify parameters
 
     std::vector<unsigned char> packet = {
@@ -132,7 +118,7 @@ void Arm::sendCommand(const Arm::Commands& command, const std::vector<unsigned c
     packet.push_back(static_cast<unsigned char>(dataLength));
     packet.push_back(static_cast<unsigned char>(command));
     packet.insert(packet.end(), arguments.begin(), arguments.end());
-    hid::sendData(device, packet);
+    device->sendData(packet);
 }
 
 void Arm::setServoPositions(int actionTime, const std::array<int, Arm::numJoints>& positions, int epsilon, bool wait)
@@ -192,7 +178,7 @@ std::vector<int> Arm::readServoPositions(const std::vector<int>& ids)
     }
     sendCommand(Arm::Commands::Read, arguments);
 
-    const auto reading = hid::recvData(device);
+    const auto reading = device->recvData();
     if (reading[0] != static_cast<BYTE>(Arm::Commands::Read))
     {
         throw;
@@ -224,7 +210,7 @@ std::array<int, Arm::numJoints> Arm::readServoPositions()
     }
     sendCommand(Arm::Commands::Read, arguments);
 
-    const auto reading = hid::recvData(device);
+    const auto reading = device->recvData();
     if (reading[0] != static_cast<BYTE>(Arm::Commands::Read))
     {
         throw;

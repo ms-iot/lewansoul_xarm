@@ -4,9 +4,7 @@
 #include <array>
 #include <memory>
 
-// platform
-#include <windows.h>
-
+#include "ihid.h"
 #include "joint.h"
 
 namespace xarm {
@@ -15,7 +13,6 @@ class Arm
 {
 public:
     Arm();
-    ~Arm();
 
     static const int numJoints = 6;
 
@@ -42,9 +39,8 @@ private:
     std::vector<int> readServoPositions(const std::vector<int>& ids);
     std::array<int, Arm::numJoints> readServoPositions();
 
-    ::HANDLE device = nullptr;
-
     // bool ready = true;
+    std::unique_ptr<IHid> device;
     std::array<std::unique_ptr<Joint>, Arm::numJoints> joints;
 };
 

@@ -4,14 +4,25 @@
 #include <string>
 #include <vector>
 
-// platform
-#include <windows.h>
+#include "dep/hidapi.h"
+#include "ihid.h"
 
-namespace hid {
+namespace xarm {
 
-::HANDLE initializeDevice(const std::wstring& vid, const std::wstring& pid);
-void sendData(::HANDLE device, const std::vector<BYTE>& data);
-std::vector<BYTE> recvData(::HANDLE device);
+class Hid : public IHid
+{
+public:
+    Hid();
+    ~Hid();
+
+    void sendData(const std::vector<unsigned char>& data);
+    std::vector<unsigned char> recvData();
+
+private:
+    void initializeDevice(const std::wstring& vid, const std::wstring& pid);
+
+    hid_device* device = nullptr;
+};
 
 }
 
