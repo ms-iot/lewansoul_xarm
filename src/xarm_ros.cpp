@@ -3,12 +3,13 @@
 #include <tf/transform_broadcaster.h>
 
 #include <array>
+#include <functional>
+
+#include <boost/function.hpp>
 
 #include "xarm.h"
 
 using namespace xarm;
-
-Arm arm;
 
 const std::string left_gripper_joint = "left_gripper_joint_0";
 const std::string wrist_joint_1 = "wrist_joint_1";
@@ -17,7 +18,7 @@ const std::string elbow_joint = "elbow_joint_3";
 const std::string shoulder_joint = "shoulder_joint_4";
 const std::string base_joint = "base_joint_5";
 
-void xArmJointState_Callback(const sensor_msgs::JointState::ConstPtr &msg)
+void handleJointStateRequest(Arm& arm, const sensor_msgs::JointState::ConstPtr& msg)
 {
     const auto &name = msg->name;
     const auto &position = msg->position;
@@ -67,13 +68,18 @@ void xArmJointState_Callback(const sensor_msgs::JointState::ConstPtr &msg)
 
 int main(int argc, char** argv)
 {
+    Arm arm;
+
     ROS_INFO("Arm state: [ready]!");
-    arm.resetJointPositions();
+    arm.resetJointPositions(); 
 
     ros::init(argc, argv, "xarm");
     ros::NodeHandle nh;
     ros::Publisher pub = nh.advertise<sensor_msgs::JointState>("/joint_states", 1);
-    ros::Subscriber sub = nh.subscribe("/joint_states_goal", 1, xArmJointState_Callback);
+
+    // ros::Subscriber does not take std::function
+    boost::function<void(const sensor_msgs::JointState::ConstPtr&)> actuator = std::bind(handleJointStateRequest, std::ref(arm), std::placeholders::_1);
+    ros::Subscriber sub = nh.subscribe("/joint_states_goal", 1, actuator);
     ros::Rate loop_rate(20);
 
     tf::TransformBroadcaster broadcaster;

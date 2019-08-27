@@ -5,7 +5,6 @@
 #include <thread>
 
 // platform
-// platform
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h> // for wcscpy_s, wcscat_s
@@ -15,7 +14,7 @@
 #include <hidsdi.h>
 #include <setupapi.h>
 #include <initguid.h>
-#include <devpkey.h>    // device property keys		   (DEVPKEY_Device_HardwareIds)
+#include <devpkey.h>    // device property keys        (DEVPKEY_Device_HardwareIds)
 #include <devpropdef.h> // device property definitions (DEVPROP_TYPE_STRING_LIST)
 #include <windows.h>
 
