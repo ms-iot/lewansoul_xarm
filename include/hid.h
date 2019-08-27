@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "dep/hidapi.h"
+
 #include "ihid.h"
 
 namespace xarm {
@@ -19,8 +20,6 @@ public:
     std::vector<unsigned char> recvData();
 
 private:
-    void initializeDevice(const std::wstring& vid, const std::wstring& pid);
-
     hid_device* device = nullptr;
 };
 

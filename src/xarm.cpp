@@ -3,9 +3,6 @@
 #include <iostream>
 #include <cmath>
 
-// platform
-#include <windows.h>
-
 #include "ihid.h"
 #include "xarm.h"
 #include "joint.h"
@@ -124,12 +121,12 @@ void Arm::sendCommand(const Arm::Commands& command, const std::vector<unsigned c
 void Arm::setServoPositions(int actionTime, const std::array<int, Arm::numJoints>& positions, int epsilon, bool wait)
 {
     std::vector<unsigned char> arguments;
-    arguments.push_back(static_cast<BYTE>(positions.size()));
+    arguments.push_back(static_cast<unsigned char>(positions.size()));
     arguments.push_back(0x00ff & actionTime);
     arguments.push_back((0xff00 & actionTime) >> 8);
     for (auto i = 0; i < positions.size(); ++i)
     {
-        arguments.push_back(static_cast<BYTE>(i + 1));
+        arguments.push_back(static_cast<unsigned char>(i + 1));
         arguments.push_back(0x00ff & positions[i]);
         arguments.push_back((0xff00 & positions[i]) >> 8);
     }
@@ -170,16 +167,16 @@ void Arm::setServoPositions(int actionTime, const std::array<int, Arm::numJoints
 
 std::vector<int> Arm::readServoPositions(const std::vector<int>& ids)
 {
-    std::vector<BYTE> arguments;
-    arguments.push_back(static_cast<BYTE>(ids.size()));
+    std::vector<unsigned char> arguments;
+    arguments.push_back(static_cast<unsigned char>(ids.size()));
     for (const auto& id : ids)
     {
-        arguments.push_back(static_cast<BYTE>(id));
+        arguments.push_back(static_cast<unsigned char>(id));
     }
     sendCommand(Arm::Commands::Read, arguments);
 
     const auto reading = device->recvData();
-    if (reading[0] != static_cast<BYTE>(Arm::Commands::Read))
+    if (reading[0] != static_cast<unsigned char>(Arm::Commands::Read))
     {
         throw;
     }
@@ -202,16 +199,16 @@ std::vector<int> Arm::readServoPositions(const std::vector<int>& ids)
 
 std::array<int, Arm::numJoints> Arm::readServoPositions()
 {
-    std::vector<BYTE> arguments;
-    arguments.push_back(static_cast<BYTE>(6));
+    std::vector<unsigned char> arguments;
+    arguments.push_back(static_cast<unsigned char>(6));
     for (auto id = 1; id <= 6; ++id)
     {
-        arguments.push_back(static_cast<BYTE>(id));
+        arguments.push_back(static_cast<unsigned char>(id));
     }
     sendCommand(Arm::Commands::Read, arguments);
 
     const auto reading = device->recvData();
-    if (reading[0] != static_cast<BYTE>(Arm::Commands::Read))
+    if (reading[0] != static_cast<unsigned char>(Arm::Commands::Read))
     {
         throw;
     }
