@@ -5,6 +5,7 @@
 #include <array>
 #include <functional>
 
+// todo: remove dependency on boost/function.hpp and make handler a member function
 #include <boost/function.hpp>
 
 #include "xarm.h"
