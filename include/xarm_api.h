@@ -5,13 +5,17 @@
 // platform
 #include <windows.h>
 
-namespace xArm {
+namespace xarm_api {
 
-    class xArm
+    class xarm_api
     {
+        private:
+        HANDLE deviceHandle;
+
         public:
-        xArm();
-        ~xArm();
+        xarm_api(::HANDLE deviceHandle);
+        ~xarm_api();
+
         struct Joints 
         {
             Joints()
@@ -20,15 +24,12 @@ namespace xArm {
             }
             std::vector<double> data;
         };
+        
         std::vector<double> convertToRadian(const std::vector<int>& servoReadings);
-
         std::vector<int> convertToServoReadings(const std::vector<double>& radian);
-
-        void MoveToPosition(::HANDLE device, const Joints& pos);
-
+        void moveToPosition(::HANDLE device, const Joints& pos);
         Joints readPosition(::HANDLE device);
-
-        void PrintCurrentPosition(::HANDLE device);
+        void printCurrentPosition(::HANDLE device);
     };
 
 } // namespace xarm

@@ -22,7 +22,7 @@
 #include <devpkey.h>    // device property keys		   (DEVPKEY_Device_HardwareIds)
 #include <devpropdef.h> // device property definitions (DEVPROP_TYPE_STRING_LIST)
 
-#include "arm.h"
+#include "xarm_api.h"
 
 using namespace xarm;
 
@@ -177,7 +177,7 @@ void xArmJointState_Callback(const sensor_msgs::JointState::ConstPtr& msg)
     }
 
     ROS_INFO("received joint states:");
-    Joints pos;
+    xarm_api::Joints pos;
     for (auto i = 0; i < names.size(); i++)
     {
         const auto& name = names[i];

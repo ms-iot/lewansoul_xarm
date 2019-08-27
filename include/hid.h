@@ -1,30 +1,16 @@
 #pragma once
 
-#include <vector>
-
-// platform
 #include <windows.h>
+#include <setupapi.h>		// HDEVINFO, SP_DEVINFO_DATA, etc
+#include <devpkey.h>		// device property keys (DEVPKEY_Device_HardwareIds)
+#include <hidsdi.h>			// HidD_GetHidGuid
 
-namespace hid 
+namespace hid
 {
-    class hid
-    {
-        public:
-
-        enum class ArmHidCommands {
-            Read = 0x15,
-            Write = 0x03,
-        };
-
-        std::vector<BYTE> generateCommandPacket(ArmHidCommands command, const std::vector<BYTE>& arguments);
-
-        void setServoPositions(::HANDLE device, int actionTime, const std::vector<int>& joints, int epsilon, bool wait = false);
-
-        std::vector<int> readServoPositions(::HANDLE device, const std::vector<int>& ids);
-
-        void sendData(::HANDLE device, const std::vector<BYTE>& data);
-
-        std::vector<BYTE> recvData(::HANDLE device);
-   
-    };
+    wchar_t* composeDevId(wchar_t* buff, const DWORD buffSize, const wchar_t* vid, const wchar_t* pid);
+    HDEVINFO getDevInfoSet(const LPGUID devClassGuid);
+    bool getDevInfoByPIDVID(const HDEVINFO devInfoSet, const LPGUID devClassGuid, const wchar_t* devId, PSP_DEVINFO_DATA devInfoBuffer);
+    bool extractInterfData(const HDEVINFO devInfoSet, PSP_DEVINFO_DATA devInfo, const LPGUID devClassGuid, PSP_DEVICE_INTERFACE_DATA interfData);
+    HANDLE getHandleToInterface(const HDEVINFO devInfoSet, const PSP_DEVICE_INTERFACE_DATA devInterfData);
+    HANDLE OpenHIDByVidPid(const WCHAR* vid, const WCHAR* pid);
 }
