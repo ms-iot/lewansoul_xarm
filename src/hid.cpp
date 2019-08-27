@@ -1,3 +1,4 @@
+#include <array>
 #include <vector>
 #include <chrono>
 #include <thread>
@@ -17,7 +18,7 @@ std::vector<BYTE> generateCommandPacket(ArmHidCommands command, const std::vecto
     return packet;
 }
 
-void setServoPositions(::HANDLE device, int actionTime, const std::vector<int>& positions, int epsilon, bool wait)
+void setServoPositions(::HANDLE device, int actionTime, const std::array<int, 6>& positions, int epsilon, bool wait)
 {
     std::vector<BYTE> arguments;
     arguments.push_back(static_cast<BYTE>(positions.size()));
@@ -87,6 +88,39 @@ std::vector<int> readServoPositions(::HANDLE device, const std::vector<int>& ids
         throw;
     }
     std::vector<int> servoPositions(6, -1);
+    for (auto i = 0; i < numServo; ++i)
+    {
+        // actual reading starts from byte 3, each servo reading takes 3 bytes
+        auto p = 2 + 3 * i;
+        const auto& topBits = reading[p + 2];
+        const auto& bottomBits = reading[p + 1];
+        servoPositions[static_cast<unsigned>(reading[p]) - 1] = (topBits << 8) | bottomBits;
+    }
+    return servoPositions;
+}
+
+std::array<int, 6> readServoPositions(::HANDLE device)
+{
+    std::vector<BYTE> arguments;
+    arguments.push_back(static_cast<BYTE>(6));
+    for (auto id = 1; id <= 6; ++id)
+    {
+        arguments.push_back(static_cast<BYTE>(id));
+    }
+    const auto command = generateCommandPacket(ArmHidCommands::Read, arguments);
+    sendData(device, command);
+
+    const auto reading = recvData(device);
+    if (reading[0] != static_cast<BYTE>(ArmHidCommands::Read))
+    {
+        throw;
+    }
+    const auto numServo = static_cast<size_t>(reading[1]);
+    if (reading.size() != numServo * 3 + 2)
+    {
+        throw;
+    }
+    std::array<int, 6> servoPositions = { 0 };
     for (auto i = 0; i < numServo; ++i)
     {
         // actual reading starts from byte 3, each servo reading takes 3 bytes
