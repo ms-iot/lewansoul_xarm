@@ -8,6 +8,9 @@
 
 #include "xarm_api.h"
 
+// initialize xArm
+xarm_api::xarm_api xarm();
+
 const std::string left_gripper_joint = "left_gripper_joint_0";
 const std::string wrist_joint_1 = "wrist_joint_1";
 const std::string wrist_joint_2 = "wrist_joint_2";
@@ -26,7 +29,7 @@ void xArmJointState_Callback(const sensor_msgs::JointState::ConstPtr& msg)
     }
 
     ROS_INFO("received joint states:");
-    Joints pos;
+    xarm_api::xarm_api::Joints pos;
     for (auto i = 0; i < names.size(); i++)
     {
         const auto& name = names[i];
@@ -56,19 +59,16 @@ void xArmJointState_Callback(const sensor_msgs::JointState::ConstPtr& msg)
             pos.data[5] = position;
         }
     }
-
-    MoveToPosition(device, pos);
+    
+    xarm.moveToPosition(xarm.getxArmHandle(), pos);
 }
-
 int main(int argc, char **argv)
 {
-    // initialize
-    device = OpenHIDByVidPid(L"0483", L"5750");
     // setup (center)
-    Joints pos;
-    pos.data = convertToRadian({ 500, 500, 500, 500, 500, 500});
+    xarm_api::xarm_api::Joints pos;
+    pos.data = xarm.convertToRadian({ 500, 500, 500, 500, 500, 500});
 
-    MoveToPosition(device, pos);
+    xarm.moveToPosition(xarm.getxArmHandle(), pos);
 
     ros::init(argc, argv, "xarm");
     ros::NodeHandle nh;
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
     while (ros::ok())
     {
         // get joint state in radian
-        const auto jointState = readPosition(device);
+        const auto jointState = xarm.readPosition(xarm.getxArmHandle());
 
         // update joint_state
         sensor_msgs::JointState joint_state;
@@ -116,3 +116,4 @@ int main(int argc, char **argv)
         loop_rate.sleep();
     }
 }
+

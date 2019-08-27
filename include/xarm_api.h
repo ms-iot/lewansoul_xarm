@@ -12,11 +12,16 @@ namespace xarm_api {
     class xarm_api
     {
         private:
-        HANDLE deviceHandle;
+        HANDLE m_deviceHandle = hid::OpenHIDByVidPid(L"0483", L"5750");
 
         public:
-        xarm_api(HANDLE deviceHandle);
+        xarm_api();
         ~xarm_api();
+
+        HANDLE getxArmHandle()
+        {
+            return this->m_deviceHandle;
+        }
 
         struct Joints 
         {

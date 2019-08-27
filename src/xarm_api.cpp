@@ -15,15 +15,16 @@ static const double maxPos[6] = {690, 700, 700, 700, 880, 1000};
 static const double minRad[6] = {-10 * (pi / 180), -90 * (pi / 180), -130 * (pi / 180), -110 * (pi / 180), -90 * (pi / 180), -150 * (pi / 180)};
 static const double maxRad[6] = {90 * (pi / 180), 90 * (pi / 180), 40 * (pi / 180), 45 * (pi / 180), 90 * (pi / 180), 90 * (pi / 180)};
 
-xarm_api::xarm_api(HANDLE deviceHandle)
+xarm_api::xarm_api()
 {
-    deviceHandle = hid::OpenHIDByVidPid(L"0483", L"5750");
+    getxArmHandle();
 }
        
 xarm_api::~xarm_api()
 {
-    ::CloseHandle(deviceHandle);
+    ::CloseHandle(getxArmHandle());
 }
+
 
 std::vector<double> xarm_api::convertToRadian(const std::vector<int>& servoReadings)
 {
