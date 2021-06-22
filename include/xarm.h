@@ -9,12 +9,24 @@
 
 namespace xarm {
 
+
+const std::string left_gripper_joint = "left_gripper_joint_0";
+const std::string wrist_joint_1 = "wrist_joint_1";
+const std::string wrist_joint_2 = "wrist_joint_2";
+const std::string elbow_joint = "elbow_joint_3";
+const std::string shoulder_joint = "shoulder_joint_4";
+const std::string base_joint = "base_joint_5";
+
+
 class Arm
 {
+    std::shared_ptr<rclcpp::Node> _node;
 public:
-    Arm();
+    Arm(std::shared_ptr<rclcpp::Node> node);
 
     static const int numJoints = 6;
+
+    bool init();
 
     void resetJointPositions();
     void setJointPositions(const std::array<double, Arm::numJoints>& pos);
@@ -25,9 +37,6 @@ private:
         Read = 0x15,
         Write = 0x03,
     };
-
-    void initializeDevice();
-    void initializeJoints();
 
     // joint-servo convertion
     std::array<double, Arm::numJoints> convertToRadian(const std::array<int, Arm::numJoints>& servoReadings);
@@ -42,6 +51,9 @@ private:
     // bool ready = true;
     std::unique_ptr<IHid> device;
     std::array<std::unique_ptr<Joint>, Arm::numJoints> joints;
+
+    void handleJointStateRequest(const sensor_msgs::msg::JointState::SharedPtr msg);
+
 };
 
 } // namespace xarm

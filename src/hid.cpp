@@ -17,8 +17,6 @@ namespace xarm {
 
 Hid::Hid()
 {
-    hid_init();
-    device = hid_open(0x0483, 0x5750, nullptr);
 }
 
 Hid::~Hid()
@@ -26,6 +24,14 @@ Hid::~Hid()
     hid_close(device);
     hid_exit();
 }
+
+bool Hid::init()
+{
+    hid_init();
+    device = hid_open(0x0483, 0x5750, nullptr);
+    return device != nullptr;
+}
+
 
 void Hid::sendData(const std::vector<unsigned char>& data)
 {

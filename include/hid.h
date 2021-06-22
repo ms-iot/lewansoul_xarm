@@ -19,6 +19,8 @@ public:
     void sendData(const std::vector<unsigned char>& data);
     std::vector<unsigned char> recvData();
 
+    bool init();
+
 private:
     hid_device* device = nullptr;
 };

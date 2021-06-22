@@ -1,7 +1,11 @@
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
+
 #include <array>
 #include <vector>
 #include <iostream>
 #include <cmath>
+#include <functional>
 
 #include "ihid.h"
 #include "xarm.h"
@@ -11,38 +15,23 @@
 namespace xarm
 {
 
-Arm::Arm()
+Arm::Arm(std::shared_ptr<rclcpp::Node> node)
+: _node(node)
 {
-    initializeDevice();
-    initializeJoints();
 }
 
-void Arm::resetJointPositions()
+bool Arm::init()
 {
-    const uint16_t actionTime = 1000;
-    setServoPositions(actionTime, {500, 500, 500, 500, 500, 500}, 50);
-}
+    auto sub = _node->create_subscription<sensor_msgs::msg::JointState>("/joint_states_goal", 1, 
+        std::bind(&Arm::handleJointStateRequest, this, std::placeholders::_1));
 
-void Arm::setJointPositions(const std::array<double, Arm::numJoints> &pos)
-{
-    const uint16_t actionTime = 1000;
-    const auto servoPositions = convertToServoReadings(pos);
-    setServoPositions(actionTime, servoPositions, 50);
-}
-
-std::array<double, Arm::numJoints> Arm::getJointPositions()
-{
-    const auto servoReadings = readServoPositions();
-    return convertToRadian(servoReadings);
-}
-
-void Arm::initializeDevice()
-{
     device = std::make_unique<Hid>();
-}
 
-void Arm::initializeJoints()
-{
+    if (!device->init())
+    {
+        return false;
+    }
+
     auto const degreeToRadianWorker = [](double degree) -> double {
         static const auto pi = std::atan(1) * 4;
         return degree * pi / 180;
@@ -81,6 +70,28 @@ void Arm::initializeJoints()
     {
         joints[i] = std::make_unique<Joint>(minServo[i], maxServo[i], minAngle[i], maxAngle[i]);
     }
+
+    return true;
+}
+
+
+void Arm::resetJointPositions()
+{
+    const uint16_t actionTime = 1000;
+    setServoPositions(actionTime, {500, 500, 500, 500, 500, 500}, 50);
+}
+
+void Arm::setJointPositions(const std::array<double, Arm::numJoints> &pos)
+{
+    const uint16_t actionTime = 1000;
+    const auto servoPositions = convertToServoReadings(pos);
+    setServoPositions(actionTime, servoPositions, 50);
+}
+
+std::array<double, Arm::numJoints> Arm::getJointPositions()
+{
+    const auto servoReadings = readServoPositions();
+    return convertToRadian(servoReadings);
 }
 
 std::array<double, Arm::numJoints> Arm::convertToRadian(const std::array<int, Arm::numJoints> &servoReadings)
@@ -228,5 +239,56 @@ std::array<int, Arm::numJoints> Arm::readServoPositions()
     }
     return servoPositions;
 }
+
+
+void Arm::handleJointStateRequest(const sensor_msgs::msg::JointState::SharedPtr msg)
+{
+    const auto &name = msg->name;
+    const auto &position = msg->position;
+    // const auto &velocity = msg->velocity;
+    // const auto &effort = msg->effort;
+
+    // @todo: sanity check with joint names
+    if (name.size() != position.size())
+    {
+        RCLCPP_ERROR(_node->get_logger(),"name [size: %d] and position [size: %d] don't match!", name.size(), position.size());
+        return;
+    }
+
+    RCLCPP_INFO(_node->get_logger(), "received joint states!");
+    std::array<double, Arm::numJoints> pos = {0};
+    for (auto i = 0; i < name.size(); i++)
+    {
+        const auto &n = name[i];
+        const auto &p = position[i];
+        if (n == left_gripper_joint)
+        {
+            pos[0] = p;
+        }
+        else if (n == wrist_joint_1)
+        {
+            pos[1] = p;
+        }
+        else if (n == wrist_joint_2)
+        {
+            pos[2] = p;
+        }
+        else if (n == elbow_joint)
+        {
+            pos[3] = p;
+        }
+        else if (n == shoulder_joint)
+        {
+            pos[4] = p;
+        }
+        else if (n == base_joint)
+        {
+            pos[5] = p;
+        }
+    };
+
+    setJointPositions(pos);
+}
+
 
 } // namespace xarm

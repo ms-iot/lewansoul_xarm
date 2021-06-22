@@ -1,30 +1,18 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(lewansoulxarm)
 
-find_package(catkin REQUIRED
-    urdf
-    roscpp
-    std_msgs
-    tf
-    sensor_msgs
-    message_generation
-    interactive_markers
-    visualization_msgs
-) 
-get_cmake_property(_variableNames VARIABLES)
-list (SORT _variableNames)
-foreach (_variableName ${_variableNames})
-    message(STATUS "${_variableName}=${${_variableName}}")
-endforeach()
+find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(sensor_msgs REQUIRED)
+
+
 find_package(Boost REQUIRED COMPONENTS system thread)
-catkin_package(
-  # INCLUDE_DIRS include
-#  LIBRARIES xarm
-  DEPENDS Boost
-)
 
 include_directories(
-  ${catkin_INCLUDE_DIRS}
+  include
 )
 
 add_executable(xarm
@@ -33,18 +21,18 @@ add_executable(xarm
   src/hid.cpp
   src/joint.cpp
 )
-target_include_directories(xarm
-  PRIVATE include
+
+ament_target_dependencies(xarm
+  ament_index_cpp
+  rclcpp
+  std_msgs
+  sensor_msgs
+  tf2_ros
+  geometry_msgs
 )
 
-add_dependencies(xarm
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-)
 target_link_libraries(xarm
-  ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
-  SetupAPI.lib
   Hid.lib
   ${CMAKE_CURRENT_SOURCE_DIR}/dep/hidapi-win/x64/hidapi.lib
 )
@@ -55,7 +43,9 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/dep/hidapi-win/x64/hidapi.dll
 endif()
 
 install(TARGETS xarm
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  ARCHIVE DESTINATION lib/${PROJECT_NAME}
+  LIBRARY DESTINATION lib/${PROJECT_NAME}
+  RUNTIME DESTINATION bin/${PROJECT_NAME}
 )
+
+ament_package()

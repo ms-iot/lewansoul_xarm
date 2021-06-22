@@ -10,6 +10,8 @@ class IHid
 public:
     ~IHid() = default;
 
+    virtual bool init() = 0;
+
     virtual void sendData(const std::vector<unsigned char>& data) = 0;
     virtual std::vector<unsigned char> recvData() = 0;
 };
