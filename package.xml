@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>xarm</name>
+  <name>lewansoulxarm</name>
   <version>0.0.0</version>
-  <description>The xArm package</description>
-  <maintainer email="t-phnguy@todo.todo">t-phnguy</maintainer>
+  <description>The lewansoul xArm package</description>
+  <maintainer email="riotsquad@microsoft.com">Azure Edge Robotics</maintainer>
   <license>TODO</license>
 
   <buildtool_depend>catkin</buildtool_depend>

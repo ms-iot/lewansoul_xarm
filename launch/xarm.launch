@@ -1,11 +1,12 @@
 <launch>
-  <arg name="model" default="$(find xarm)/urdf/xarm.urdf" />
+  <arg name="model" default="$(find lewansoulxarm)/urdf/xarm.urdf" />
   <arg name="gui" default="true" />
 
   <param name="robot_description" command="$(find xacro)/xacro $(arg model)" />
   <param name="use_gui" value="$(arg gui)" />
 
-  <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
   <node name="rviz" pkg="rviz" type="rviz" required="true" />
-  <node name="xarm_node" pkg="xarm" type="xarm_node" />
+  <node name="lewansoulxarm" pkg="lewansoulxarm" type="xarm" />
+  <!-- <node name="xarm_marker" pkg="xarm" type="xarm_marker" /> -->
 </launch>

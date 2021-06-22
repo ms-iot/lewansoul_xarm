@@ -1,0 +1,26 @@
+digraph G {
+node [shape=box];
+"lower_base_link" [label="lower_base_link"];
+"upper_base_link" [label="upper_base_link"];
+"shoulder_to_elbow_link" [label="shoulder_to_elbow_link"];
+"elbow_to_wrist_link" [label="elbow_to_wrist_link"];
+"inter-wrist_link" [label="inter-wrist_link"];
+"base_gripper_link" [label="base_gripper_link"];
+"left_gripper_link" [label="left_gripper_link"];
+"right_gripper_link" [label="right_gripper_link"];
+node [shape=ellipse, color=blue, fontcolor=blue];
+"lower_base_link" -> "base_joint_id_6" [label="xyz: 0 0 0 \nrpy: 0 -0 0"]
+"base_joint_id_6" -> "upper_base_link"
+"upper_base_link" -> "shoulder_joint_id_5" [label="xyz: 0 0 0 \nrpy: 0 -0 0"]
+"shoulder_joint_id_5" -> "shoulder_to_elbow_link"
+"shoulder_to_elbow_link" -> "elbow_joint_id_4" [label="xyz: 0 0 0 \nrpy: 0 -0 0"]
+"elbow_joint_id_4" -> "elbow_to_wrist_link"
+"elbow_to_wrist_link" -> "wrist_joint_id_3" [label="xyz: 0 0 0 \nrpy: 0 -0 0"]
+"wrist_joint_id_3" -> "inter-wrist_link"
+"inter-wrist_link" -> "wrist_joint_id_2" [label="xyz: 0 0 0 \nrpy: 0 -0 0"]
+"wrist_joint_id_2" -> "base_gripper_link"
+"base_gripper_link" -> "gripper_joint_id_1_left" [label="xyz: 0 0 0 \nrpy: 0 -0 0"]
+"gripper_joint_id_1_left" -> "left_gripper_link"
+"base_gripper_link" -> "gripper_joint_id_1_right" [label="xyz: 0 0 0 \nrpy: 0 -0 0"]
+"gripper_joint_id_1_right" -> "right_gripper_link"
+}

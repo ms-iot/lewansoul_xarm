@@ -1,16 +1,28 @@
-#pragma once
+#ifndef _XARM_HID_H
+#define _XARM_HID_H
 
-#include <windows.h>
-#include <setupapi.h>		// HDEVINFO, SP_DEVINFO_DATA, etc
-#include <devpkey.h>		// device property keys (DEVPKEY_Device_HardwareIds)
-#include <hidsdi.h>			// HidD_GetHidGuid
+#include <string>
+#include <vector>
 
-namespace hid
+#include "dep/hidapi.h"
+
+#include "ihid.h"
+
+namespace xarm {
+
+class Hid : public IHid
 {
-    wchar_t* composeDevId(wchar_t* buff, const DWORD buffSize, const wchar_t* vid, const wchar_t* pid);
-    HDEVINFO getDevInfoSet(const LPGUID devClassGuid);
-    bool getDevInfoByPIDVID(const HDEVINFO devInfoSet, const LPGUID devClassGuid, const wchar_t* devId, PSP_DEVINFO_DATA devInfoBuffer);
-    bool extractInterfData(const HDEVINFO devInfoSet, PSP_DEVINFO_DATA devInfo, const LPGUID devClassGuid, PSP_DEVICE_INTERFACE_DATA interfData);
-    HANDLE getHandleToInterface(const HDEVINFO devInfoSet, const PSP_DEVICE_INTERFACE_DATA devInterfData);
-    HANDLE OpenHIDByVidPid(const WCHAR* vid, const WCHAR* pid);
+public:
+    Hid();
+    ~Hid();
+
+    void sendData(const std::vector<unsigned char>& data);
+    std::vector<unsigned char> recvData();
+
+private:
+    hid_device* device = nullptr;
+};
+
 }
+
+#endif
